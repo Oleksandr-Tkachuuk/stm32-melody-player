@@ -1,0 +1,23 @@
+# Build directories
+Debug/
+Release/
+Build/
+
+# STM32CubeIDE files
+.settings/
+.project
+.cproject
+
+# Object and dependency files
+*.o
+*.d
+*.su
+
+# Executable and map files
+*.elf
+*.map
+*.hex
+*.bin
+
+# User-specific files
+*.user
