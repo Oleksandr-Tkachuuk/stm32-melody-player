@@ -41,8 +41,6 @@ Systém má byť modulárny, spoľahlivý a vhodný na prezentáciu princípov e
 
 ## 2.1 Blokový diagram
 
-markdown
-Копіювати код
    Bluetooth modul
         │ UART
         ▼
@@ -61,9 +59,6 @@ markdown
 │ │ UART Handler │──> Bluetooth
 │ └──────────────┘ │
 └────────────────────────────┘
-
-yaml
-Копіювати код
 
 ---
 
