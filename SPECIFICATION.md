@@ -41,26 +41,26 @@ Systém má byť modulárny, spoľahlivý a vhodný na prezentáciu princípov e
 
 ## 2.1 Blokový diagram
 
-   Bluetooth modul
+```text
+Bluetooth modul
         │ UART
         ▼
 ┌────────────────────────────┐
-│ STM32F303K8 │
-│ │
-│ ┌──────────────┐ │
-│ │ PWM Timer │──> Speaker (pasívny)
-│ └──────────────┘ │
-│ │
-│ ┌──────────────┐ │
-│ │ LED Driver │──> RGB LED (8 segmentov)
-│ └──────────────┘ │
-│ │
-│ ┌──────────────┐ │
-│ │ UART Handler │──> Bluetooth
-│ └──────────────┘ │
+│        STM32F303K8         │
+│                            │
+│   ┌──────────────┐         │
+│   │  PWM Timer   │ ──> Speaker (pasívny)
+│   └──────────────┘         │
+│                            │
+│   ┌──────────────┐         │
+│   │ LED Driver   │ ──> RGB LED (8 segmentov)
+│   └──────────────┘         │
+│                            │
+│   ┌──────────────┐         │
+│   │ UART Handler │ ──> Bluetooth
+│   └──────────────┘         │
 └────────────────────────────┘
-
----
+```
 
 ## 2.2 Tok dát
 
