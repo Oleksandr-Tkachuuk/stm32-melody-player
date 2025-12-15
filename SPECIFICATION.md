@@ -79,14 +79,15 @@ Bluetooth modul
 # 3. HARDVÉROVÁ ŠPECIFIKÁCIA
 
 ## 3.1 Komponenty 
-| Komponent | Preferovaný model | Rozhranie | Účel | Poznámka |
-|----------|------------------|----------|------|---------|
-| MCU board | STM32 Nucleo (STM32F303K8 / F401RE) | GPIO, TIM, UART | Hlavný mikrokontrolér | Iný STM32 Nucleo s PWM a UART je akceptovateľný |
-| Pasívny reproduktor / buzzer | 4–8 Ω passive buzzer | PWM (Timer) | Generovanie tónov | Aktívny buzzer nie je vhodný |
-| RGB LED | WS2812B alebo 8× RGB LED | GPIO / SPI / PWM | Svetelná vizualizácia | Alternatívne jednotlivé LED + rezistory |
-| Bluetooth modul | HC-05 / HC-06 | UART | Bezdrôtové ovládanie | Možné nahradiť USB-UART |
-| Napájanie | USB 5V | — | Napájanie systému | Z Nucleo board |
-| Prototypovanie | Breadboard, jumper wires | — | Zapojenie | Min. 1 sada na skupinu |
+
+- STM32 Nucleo STM32F303K8 
+
+| Audio výstup | Pasívny bzučiak alebo 8 Ω reproduktor
+| Ovládací NPN tranzistor (napr. 2N2222)
+| RGB LED WS2812B -> https://techfun.sk/produkt/rgb-led-matrix-5x5-ws2812b-25-bit/
+| Bluetooth modul HC-05 / HC-06 -> https://techfun.sk/produkt/bluetooth-modul-hc-05-slavemaster/
+| Breadboard + jumper kabliky
+
 
 ---
 
