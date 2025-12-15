@@ -78,16 +78,15 @@ Bluetooth modul
 
 # 3. HARDVÉROVÁ ŠPECIFIKÁCIA
 
-Poznámka: momentálne bez konkrétnych modelov. Hardvér bude doplnený po výbere komponentov.
-
-## 3.1 Komponenty (bez konkrétnych typov)
-| Komponent | Rozhranie | Účel |
-|----------|------------|-------|
-| STM32F303K8 | - | Hlavný mikroregulátor |
-| Pasívny reproduktor | PWM | Generovanie tónov |
-| RGB LED (8 segmentov) | GPIO / MOSFET Driver | Svetelná vizualizácia |
-| Bluetooth modul | UART | Ovládanie zariadenia |
-| Zdroj napájania | - | Napájanie mikrokontroléra a LED |
+## 3.1 Komponenty 
+| Komponent | Preferovaný model | Rozhranie | Účel | Poznámka |
+|----------|------------------|----------|------|---------|
+| MCU board | STM32 Nucleo (STM32F303K8 / F401RE) | GPIO, TIM, UART | Hlavný mikrokontrolér | Iný STM32 Nucleo s PWM a UART je akceptovateľný |
+| Pasívny reproduktor / buzzer | 4–8 Ω passive buzzer | PWM (Timer) | Generovanie tónov | Aktívny buzzer nie je vhodný |
+| RGB LED | WS2812B alebo 8× RGB LED | GPIO / SPI / PWM | Svetelná vizualizácia | Alternatívne jednotlivé LED + rezistory |
+| Bluetooth modul | HC-05 / HC-06 | UART | Bezdrôtové ovládanie | Možné nahradiť USB-UART |
+| Napájanie | USB 5V | — | Napájanie systému | Z Nucleo board |
+| Prototypovanie | Breadboard, jumper wires | — | Zapojenie | Min. 1 sada na skupinu |
 
 ---
 
