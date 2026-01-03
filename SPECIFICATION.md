@@ -76,18 +76,19 @@ Bluetooth modul
 
 ---
 
-# 3. HARDVÉROVÁ ŠPECIFIKÁCIA
+## 3. HARDVÉROVÁ ŠPECIFIKÁCIA
 
-Poznámka: momentálne bez konkrétnych modelov. Hardvér bude doplnený po výbere komponentov.
+### 3.1 Komponenty
 
-## 3.1 Komponenty (bez konkrétnych typov)
-| Komponent | Rozhranie | Účel |
-|----------|------------|-------|
-| STM32F303K8 | - | Hlavný mikroregulátor |
-| Pasívny reproduktor | PWM | Generovanie tónov |
-| RGB LED (8 segmentov) | GPIO / MOSFET Driver | Svetelná vizualizácia |
-| Bluetooth modul | UART | Ovládanie zariadenia |
-| Zdroj napájania | - | Napájanie mikrokontroléra a LED |
+- **MCU:** STM32 Nucleo STM32F303K8
+- **Audio výstup:** pasívny bzučiak alebo 8 Ω reproduktor  
+  - ovládanie pomocou NPN tranzistora (napr. 2N2222)
+- **RGB LED:** WS2812B  
+  - https://techfun.sk/produkt/rgb-led-matrix-5x5-ws2812b-25-bit/
+- **Bluetooth modul:** HC-05 / HC-06  
+  - https://techfun.sk/produkt/bluetooth-modul-hc-05-slavemaster/
+- **Prototypovanie:** breadboard + jumper kábliky
+
 
 ---
 
