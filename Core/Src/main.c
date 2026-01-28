@@ -42,7 +42,6 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
-DMA_HandleTypeDef hdma_tim2_ch1;
 
 UART_HandleTypeDef huart2;
 
@@ -53,16 +52,38 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void set_speaker_tone(uint32_t freq_hz, uint8_t volume)
+{
+    if (freq_hz == 0 || volume == 0)
+    {
+        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+        return;
+    }
+
+    // TIM2 clock = 8 MHz (HSI, APB1 = 1)
+    uint32_t tim_clk = 8000000UL;
+
+    // ARR = (Fclk / freq) - 1
+    uint32_t arr = (tim_clk / freq_hz) - 1;
+    if (arr < 10) arr = 10;
+
+    __HAL_TIM_SET_AUTORELOAD(&htim2, arr);
+    __HAL_TIM_SET_COUNTER(&htim2, 0);
+
+    if (volume > 100) volume = 100;
+    uint32_t ccr = (arr * volume) / 100;
+
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, ccr);
+}
 
 /* USER CODE END 0 */
 
@@ -95,11 +116,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_TIM1_Init();
-  MX_TIM2_Init();
   MX_USART2_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+
+
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+
 
   /* USER CODE END 2 */
 
@@ -107,12 +131,46 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  set_speaker_tone(523, 10);  // C5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(587, 10);  // D5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(659, 10);  // E5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(698, 10);  // F5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(784, 10);  // G5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(880, 10);  // A5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(988, 10);  // B5
+	  HAL_Delay(300);
+
+	  set_speaker_tone(1047, 10); // C6
+	  HAL_Delay(300);
+
+	  set_speaker_tone(0, 0);
+	  HAL_Delay(500);
+
+
+    /* USER CODE BEGIN 3 */
+
+    /* USER CODE END 3 */
+  }
+}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
@@ -265,7 +323,7 @@ static void MX_TIM2_Init(void)
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -308,22 +366,6 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Channel5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
 }
 
