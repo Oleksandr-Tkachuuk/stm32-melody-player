@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "speaker.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,29 +61,6 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void set_speaker_tone(uint32_t freq_hz, uint8_t volume)
-{
-    if (freq_hz == 0 || volume == 0)
-    {
-        __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-        return;
-    }
-
-    // TIM2 clock = 8 MHz (HSI, APB1 = 1)
-    uint32_t tim_clk = 8000000UL;
-
-    // ARR = (Fclk / freq) - 1
-    uint32_t arr = (tim_clk / freq_hz) - 1;
-    if (arr < 10) arr = 10;
-
-    __HAL_TIM_SET_AUTORELOAD(&htim2, arr);
-    __HAL_TIM_SET_COUNTER(&htim2, 0);
-
-    if (volume > 100) volume = 100;
-    uint32_t ccr = (arr * volume) / 100;
-
-    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, ccr);
-}
 
 /* USER CODE END 0 */
 
@@ -119,12 +96,10 @@ int main(void)
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
+
+
   /* USER CODE BEGIN 2 */
-
-
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-
-
+  Speaker_Init(&htim2, TIM_CHANNEL_2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -132,37 +107,33 @@ int main(void)
   while (1)
   {
 
-	  set_speaker_tone(523, 10);  // C5
+	  Speaker_Set_Tone(523, 10);  // C5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(587, 10);  // D5
+	  Speaker_Set_Tone(587, 10);  // D5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(659, 10);  // E5
+	  Speaker_Set_Tone(659, 10);  // E5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(698, 10);  // F5
+	  Speaker_Set_Tone(698, 10);  // F5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(784, 10);  // G5
+	  Speaker_Set_Tone(784, 10);  // G5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(880, 10);  // A5
+	  Speaker_Set_Tone(880, 10);  // A5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(988, 10);  // B5
+	  Speaker_Set_Tone(988, 10);  // B5
 	  HAL_Delay(300);
 
-	  set_speaker_tone(1047, 10); // C6
+	  Speaker_Set_Tone(1047, 10); // C6
 	  HAL_Delay(300);
 
-	  set_speaker_tone(0, 0);
+	  Speaker_Set_Tone(0, 0);
 	  HAL_Delay(500);
 
-
-    /* USER CODE BEGIN 3 */
-
-    /* USER CODE END 3 */
   }
 }
     /* USER CODE END WHILE */
