@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "speaker.h"
+#include "bt.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +32,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+/* Demo timing (ms) */
+#define DEMO_NOTE_MS   300U
+#define DEMO_PAUSE_MS  500U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,7 +49,7 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+static bt_context_t bt_ctx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,6 +66,61 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
+/*
+ * !!!! Неблокирующий демонстрационный проигрыватель «мелодии» (гамма).
+ * Это заглушка до добавления настоящих таблиц мелодий.
+ *
+ * Поведение:
+ * - Проигрывает только когда bt_ctx.state == BT_STATE_PLAYING
+ * - Немедленно останавливается при получении команды STOP
+ * - Использует HAL_GetTick() вместо HAL_Delay() для лучшей отзывчивости
+ */
+
+static void play_demo_scale_tick(void)
+{
+  /* Frequencies for a simple scale (Hz). Last element 0 = silence/pause. */
+  static const uint16_t notes[] = { 523, 587, 659, 698, 784, 880, 988, 1047, 0 };
+  static const uint8_t  note_count = (uint8_t)(sizeof(notes) / sizeof(notes[0]));
+
+  static uint8_t  idx = 0;
+  static uint32_t next_change_ms = 0;
+  static uint8_t  active = 0;
+
+  /* If not playing -> stop sound and reset the demo state */
+  if (bt_ctx.state != BT_STATE_PLAYING) {
+    Speaker_Set_Tone(0, 0);
+    idx = 0;
+    next_change_ms = 0;
+    active = 0;
+    return;
+  }
+
+  /* Start immediately when switching to PLAYING */
+  if (!active) {
+    active = 1;
+    idx = 0;
+    next_change_ms = 0;
+  }
+
+  uint32_t now = HAL_GetTick();
+  if (next_change_ms != 0 && now < next_change_ms) {
+    return; /* wait */
+  }
+
+  /* Play current step */
+  if (notes[idx] == 0) {
+    Speaker_Set_Tone(0, 0);
+    next_change_ms = now + DEMO_PAUSE_MS;
+    idx = 0; /* restart the scale */
+    return;
+  } else {
+    Speaker_Set_Tone(notes[idx], 10);
+    next_change_ms = now + DEMO_NOTE_MS;
+    idx++;
+    if (idx >= note_count) idx = 0;
+  }
+}
 
 /**
   * @brief  The application entry point.
@@ -100,47 +158,43 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   Speaker_Init(&htim2, TIM_CHANNEL_2);
+
+  /* Initialize Bluetooth protocol (UART) */
+  bt_init(&huart2, &bt_ctx);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* Обработка входящих байтов UART от BT-модуля */
+    bt_process_rx();
 
-	  Speaker_Set_Tone(523, 10);  // C5
-	  HAL_Delay(300);
+    /* Если была распознана новая команда, можно отреагировать здесь (необязательно). */
+    if (bt_has_new_command()) {
 
-	  Speaker_Set_Tone(587, 10);  // D5
-	  HAL_Delay(300);
+      /*
+       * Позже здесь будет подключено:
+       * - выбор мелодии по bt_ctx.melody_id
+       * - выбор режима светодиодов по bt_ctx.led_mode
+       * - полноценная машина состояний проекта
+       */
+      bt_clear_new_command_flag();
+    }
 
-	  Speaker_Set_Tone(659, 10);  // E5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(698, 10);  // F5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(784, 10);  // G5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(880, 10);  // A5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(988, 10);  // B5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(1047, 10); // C6
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(0, 0);
-	  HAL_Delay(500);
-
+    /* Пока реальные мелодии не реализованы: проигрывать демонстрационную гамму в состоянии PLAYING */
+    play_demo_scale_tick();
   }
-}
+
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
   /* USER CODE END 3 */
+
+}
 
 
 /**
