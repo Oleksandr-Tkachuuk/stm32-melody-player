@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "speaker.h"
+#include "ws2812.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +43,7 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+DMA_HandleTypeDef hdma_tim1_ch1;
 
 UART_HandleTypeDef huart2;
 
@@ -52,6 +54,7 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
@@ -93,13 +96,48 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
-
-
   /* USER CODE BEGIN 2 */
   Speaker_Init(&htim2, TIM_CHANNEL_2);
+  WS2812_Init();
+
+  // Define the shapes (8 bytes each, 1 byte = 1 row)
+    const uint8_t Letter_U[8] = {
+        0xC3, // 1100 0011
+        0xC3, // 1100 0011
+        0xC3, // 1100 0011
+        0xC3, // 1100 0011
+        0xC3, // 1100 0011
+        0xC3, // 1100 0011
+        0x7E, // 0111 1110
+        0x3C  // 0011 1100
+    };
+
+    const uint8_t Letter_R[8] = {
+        0xFC, // 1111 1100
+        0xC6, // 1100 0110
+        0xC6, // 1100 0110
+        0xFC, // 1111 1100
+        0xD8, // 1101 1000
+        0xCC, // 1100 1100
+        0xC6, // 1100 0110
+        0xC3  // 1100 0011
+    };
+
+    const uint8_t Letter_K[8] = {
+        0xC6, // 1100 0110
+        0xCC, // 1100 1100
+        0xD8, // 1101 1000
+        0xF0, // 1111 0000
+        0xF0, // 1111 0000
+        0xD8, // 1101 1000
+        0xCC, // 1100 1100
+        0xC6  // 1100 0110
+    };
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,33 +145,54 @@ int main(void)
   while (1)
   {
 
-	  Speaker_Set_Tone(523, 10);  // C5
-	  HAL_Delay(300);
+//	  Speaker_Set_Tone(0, 0);
+//	  HAL_Delay(500);
+	  // --- C5 Note + RED Matrix ---
+//		for(int i=0; i<32; i++) Set_LED(i, 50, 0, 0); // Red
+//		WS2812_Send(); // Update LEDs
+//
+//		Speaker_Set_Tone(523, 10);
+//		HAL_Delay(300);
+//
+//		// --- D5 Note + GREEN Matrix ---
+//		for(int i=0; i<32; i++) Set_LED(i, 0, 50, 0); // Green
+//		WS2812_Send();
+//
+//		Speaker_Set_Tone(587, 10);
+//		HAL_Delay(300);
+//
+//		// --- E5 Note + BLUE Matrix ---
+//		for(int i=0; i<32; i++) Set_LED(i, 0, 0, 50); // Blue
+//		WS2812_Send();
+//
+//		Speaker_Set_Tone(659, 10);
+//		HAL_Delay(300);
+	  // --- Display 'U' (Blue) ---
+	    WS2812_SetBrightness(40);
+		Draw_Bitmap(Letter_U, 0, 0, 255);
+		Speaker_Set_Tone(523, 10); // C5
+		HAL_Delay(600);
 
-	  Speaker_Set_Tone(587, 10);  // D5
-	  HAL_Delay(300);
+		WS2812_Clear(); WS2812_Send(); // Blink off briefly
+		HAL_Delay(100);
 
-	  Speaker_Set_Tone(659, 10);  // E5
-	  HAL_Delay(300);
+		// --- Display 'R' (Red) ---
+		WS2812_SetBrightness(40);
+		Draw_Bitmap(Letter_R, 255, 0, 0);
+		Speaker_Set_Tone(659, 10); // E5
+		HAL_Delay(600);
 
-	  Speaker_Set_Tone(698, 10);  // F5
-	  HAL_Delay(300);
+		WS2812_Clear(); WS2812_Send();
+		HAL_Delay(100);
 
-	  Speaker_Set_Tone(784, 10);  // G5
-	  HAL_Delay(300);
+		// --- Display 'K' (Green) ---
+		WS2812_SetBrightness(40);
+		Draw_Bitmap(Letter_K, 0, 50, 0);
+		Speaker_Set_Tone(784, 10); // G5
+		HAL_Delay(600);
 
-	  Speaker_Set_Tone(880, 10);  // A5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(988, 10);  // B5
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(1047, 10); // C6
-	  HAL_Delay(300);
-
-	  Speaker_Set_Tone(0, 0);
-	  HAL_Delay(500);
-
+		WS2812_Clear(); WS2812_Send();
+		HAL_Delay(500);
   }
 }
     /* USER CODE END WHILE */
@@ -159,7 +218,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -169,17 +230,17 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_TIM1;
-  PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
+  PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_PLLCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -198,6 +259,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
@@ -206,12 +268,21 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 71;
+  htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
+  htim1.Init.Period = 89;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -337,6 +408,22 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 
 }
 
