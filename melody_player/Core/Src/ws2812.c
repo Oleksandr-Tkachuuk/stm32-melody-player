@@ -6,6 +6,7 @@
  */
 
 #include "ws2812.h"
+#include "melodies.h"
 
 #if USE_BRIGHTNESS
 	static uint8_t GlobalBrightness = 255; // 0..255
@@ -49,6 +50,23 @@ uint16_t pwmData[(24 * MAX_LED) + 50];
 
 // Flag to handle DMA state
 volatile int datasentflag = 0;
+
+// Map: Frequency -> RGB
+const NoteColorMap_t NoteColors[] = {
+    {NOTE_C4_HZ, 255, 0, 0},    // C = Red
+    {NOTE_D4_HZ, 255, 127, 0},  // D = Orange
+    {NOTE_E4_HZ, 255, 255, 0},  // E = Yellow
+    {NOTE_F4_HZ, 0, 255, 0},    // F = Green
+    {NOTE_G4_HZ, 0, 0, 255},    // G = Blue
+    {NOTE_A4_HZ, 75, 0, 130},   // A = Indigo
+    {NOTE_B4_HZ, 143, 0, 255},  // B = Violet
+    {NOTE_C5_HZ, 255, 0, 0},    // C5 = Red (Higher)
+    {NOTE_D5_HZ, 255, 127, 0},
+    {NOTE_E5_HZ, 255, 255, 0},
+    {NOTE_F5_HZ, 0, 255, 0},
+    {NOTE_G5_HZ, 0, 0, 255},
+    {0, 0, 0, 0}                // Pause/Silence = Off
+};
 
 // --- Functions ---
 
@@ -164,6 +182,27 @@ void Draw_Bitmap(const uint8_t bitmap[8], int r, int g, int b)
         }
     }
     WS2812_Send(); // Push to LEDs immediately
+}
+
+void WS2812_ShowNoteColor(uint16_t freq) {
+    if (freq == 0) {
+        WS2812_Clear();
+        WS2812_Send();
+        return;
+    }
+
+    // Search the map for the matching frequency
+    for (int i = 0; i < (sizeof(NoteColors) / sizeof(NoteColorMap_t)); i++) {
+        // Use a small range check in case of rounding
+        if (freq >= NoteColors[i].freq - 2 && freq <= NoteColors[i].freq + 2) {
+            // Fill the whole 8x8 matrix with this color
+            for (int led = 0; led < MAX_LED; led++) {
+                Set_LED(led, NoteColors[i].r, NoteColors[i].g, NoteColors[i].b);
+            }
+            WS2812_Send();
+            return;
+        }
+    }
 }
 
 // --- Interrupt Callback ---

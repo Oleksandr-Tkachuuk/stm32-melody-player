@@ -24,6 +24,7 @@
 #include "speaker.h"
 #include "ws2812.h"
 #include "font8x8.h"
+#include "melodies.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -111,71 +112,27 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  Speaker_Set_Tone(0, 0);
-//	  HAL_Delay(500);
-	  // --- C5 Note + RED Matrix ---
-//		for(int i=0; i<32; i++) Set_LED(i, 50, 0, 0); // Red
-//		WS2812_Send(); // Update LEDs
-//
-//		Speaker_Set_Tone(523, 10);
-//		HAL_Delay(300);
-//
-//		// --- D5 Note + GREEN Matrix ---
-//		for(int i=0; i<32; i++) Set_LED(i, 0, 50, 0); // Green
-//		WS2812_Send();
-//
-//		Speaker_Set_Tone(587, 10);
-//		HAL_Delay(300);
-//
-//		// --- E5 Note + BLUE Matrix ---
-//		for(int i=0; i<32; i++) Set_LED(i, 0, 0, 50); // Blue
-//		WS2812_Send();
-//
-//		Speaker_Set_Tone(659, 10);
-//		HAL_Delay(300);
-	  // --- Display 'U' (Blue) ---
-//	    WS2812_SetBrightness(40);
-//		Draw_Bitmap(font_U, 0, 0, 255);
-//		Speaker_Set_Tone(523, 10); // C5
-//		HAL_Delay(600);
-//
-//		WS2812_Clear(); WS2812_Send(); // Blink off briefly
-//		HAL_Delay(100);
-//
-//		// --- Display 'R' (Red) ---
-//		WS2812_SetBrightness(40);
-//		Draw_Bitmap(font_R, 255, 0, 0);
-//		Speaker_Set_Tone(659, 10); // E5
-//		HAL_Delay(600);
-//
-//		WS2812_Clear(); WS2812_Send();
-//		HAL_Delay(100);
-//
-//		// --- Display 'K' (Green) ---
-//		WS2812_SetBrightness(40);
-//		Draw_Bitmap(font_K, 0, 50, 0);
-//		Speaker_Set_Tone(784, 10); // G5
-//		HAL_Delay(600);
-//
-//		WS2812_Clear(); WS2812_Send();
-//		HAL_Delay(500);
-      // Вверх: 200 -> 3000 Гц
-      for (uint16_t freq = 200; freq <= 800; freq += 10)
-      {
-          Speaker_Set_Tone(freq, 10);   // 10 = громкость/скважность (как у тебя)
-          HAL_Delay(300);                // скорость перебора
-      }
+//	  // Example: Playing the first melody in g_melodies
+	  const melody_t *myMelody = &g_melodies[0];
 
-      // Вниз: 3000 -> 200 Гц
-      for (int16_t freq = 800; freq >= 200; freq -= 10)
-      {
-          Speaker_Set_Tone(freq, 10);
-          HAL_Delay(300);
-      }
+	  for (int i = 0; i < myMelody->length; i++) {
+	      uint16_t f = myMelody->steps[i].freq_hz;
+	      uint16_t d = myMelody->steps[i].dur_ms;
 
-      // Короткая пауза между циклами
-      Speaker_Set_Tone(0, 0);
-      HAL_Delay(300);
+	      // 1. Play Tone
+	      Speaker_Set_Tone(f, 10);
+
+	      // 2. Map frequency to color and update matrix
+	      WS2812_ShowNoteColor(f);
+
+	      // 3. Wait for the duration of the note
+	      HAL_Delay(d);
+	  }
+
+	  // Stop everything after melody
+	  Speaker_Set_Tone(0, 0);
+	  WS2812_Clear();
+	  WS2812_Send();
 
   }
 }
