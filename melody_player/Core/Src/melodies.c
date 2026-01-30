@@ -65,8 +65,7 @@ static const melody_step_t melody3[] = {
 static const melody_step_t melody4[] = {
   {NOTE_G4_HZ,120},{P,40},{NOTE_B4_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_G5_HZ,200},{P,80},
   {NOTE_FS5_HZ,120},{P,40},{NOTE_E5_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80},
-
-  {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_A5_HZ,200},{P,80}, /* A5 not defined; keep within range by using G5 instead */
+  {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80}, /* A5 not defined; keep within range by using G5 instead */
 };
 
 /* Fix: keep within defined notes (<=800 Hz). Replace the A5 line with G5. */
