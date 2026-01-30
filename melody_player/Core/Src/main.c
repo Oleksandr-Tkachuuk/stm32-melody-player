@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "speaker.h"
 #include "ws2812.h"
+#include "melodies.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -168,31 +170,48 @@ int main(void)
 //		Speaker_Set_Tone(659, 10);
 //		HAL_Delay(300);
 	  // --- Display 'U' (Blue) ---
-	    WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_U, 0, 0, 255);
-		Speaker_Set_Tone(523, 10); // C5
-		HAL_Delay(600);
+	  //   WS2812_SetBrightness(40);
+		// Draw_Bitmap(Letter_U, 0, 0, 255);
+		// Speaker_Set_Tone(523, 10); // C5
+		// HAL_Delay(600);
 
-		WS2812_Clear(); WS2812_Send(); // Blink off briefly
-		HAL_Delay(100);
+		// WS2812_Clear(); WS2812_Send(); // Blink off briefly
+		// HAL_Delay(100);
 
-		// --- Display 'R' (Red) ---
-		WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_R, 255, 0, 0);
-		Speaker_Set_Tone(659, 10); // E5
-		HAL_Delay(600);
+		// // --- Display 'R' (Red) ---
+		// WS2812_SetBrightness(40);
+		// Draw_Bitmap(Letter_R, 255, 0, 0);
+		// Speaker_Set_Tone(659, 10); // E5
+		// HAL_Delay(600);
 
-		WS2812_Clear(); WS2812_Send();
-		HAL_Delay(100);
+		// WS2812_Clear(); WS2812_Send();
+		// HAL_Delay(100);
 
-		// --- Display 'K' (Green) ---
-		WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_K, 0, 50, 0);
-		Speaker_Set_Tone(784, 10); // G5
-		HAL_Delay(600);
+		// // --- Display 'K' (Green) ---
+		// WS2812_SetBrightness(40);
+		// Draw_Bitmap(Letter_K, 0, 50, 0);
+		// Speaker_Set_Tone(784, 10); // G5
+		// HAL_Delay(600);
 
-		WS2812_Clear(); WS2812_Send();
-		HAL_Delay(500);
+		// WS2812_Clear(); WS2812_Send();
+		// HAL_Delay(500);
+
+    for (uint8_t mid = 0; mid < MELODY_COUNT; mid++) {
+
+    const melody_t *m = &g_melodies[mid];
+
+    for (uint16_t i = 0; i < m->length; i++) {
+
+      if (m->steps[i].freq_hz == 0)
+        Speaker_Stop();
+      else
+        Speaker_Set_Tone(m->steps[i].freq_hz, 10);
+
+      HAL_Delay(m->steps[i].dur_ms);
+    }
+
+    Speaker_Stop();
+    HAL_Delay(500);
   }
 }
     /* USER CODE END WHILE */
