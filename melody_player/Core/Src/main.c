@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "speaker.h"
 #include "ws2812.h"
+#include "font8x8.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -104,47 +105,12 @@ int main(void)
   Speaker_Init(&htim2, TIM_CHANNEL_2);
   WS2812_Init();
 
-  // Define the shapes (8 bytes each, 1 byte = 1 row)
-    const uint8_t Letter_U[8] = {
-        0xC3, // 1100 0011
-        0xC3, // 1100 0011
-        0xC3, // 1100 0011
-        0xC3, // 1100 0011
-        0xC3, // 1100 0011
-        0xC3, // 1100 0011
-        0x7E, // 0111 1110
-        0x3C  // 0011 1100
-    };
-
-    const uint8_t Letter_R[8] = {
-        0xFC, // 1111 1100
-        0xC6, // 1100 0110
-        0xC6, // 1100 0110
-        0xFC, // 1111 1100
-        0xD8, // 1101 1000
-        0xCC, // 1100 1100
-        0xC6, // 1100 0110
-        0xC3  // 1100 0011
-    };
-
-    const uint8_t Letter_K[8] = {
-        0xC6, // 1100 0110
-        0xCC, // 1100 1100
-        0xD8, // 1101 1000
-        0xF0, // 1111 0000
-        0xF0, // 1111 0000
-        0xD8, // 1101 1000
-        0xCC, // 1100 1100
-        0xC6  // 1100 0110
-    };
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
 //	  Speaker_Set_Tone(0, 0);
 //	  HAL_Delay(500);
 	  // --- C5 Note + RED Matrix ---
@@ -168,31 +134,49 @@ int main(void)
 //		Speaker_Set_Tone(659, 10);
 //		HAL_Delay(300);
 	  // --- Display 'U' (Blue) ---
-	    WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_U, 0, 0, 255);
-		Speaker_Set_Tone(523, 10); // C5
-		HAL_Delay(600);
+//	    WS2812_SetBrightness(40);
+//		Draw_Bitmap(font_U, 0, 0, 255);
+//		Speaker_Set_Tone(523, 10); // C5
+//		HAL_Delay(600);
+//
+//		WS2812_Clear(); WS2812_Send(); // Blink off briefly
+//		HAL_Delay(100);
+//
+//		// --- Display 'R' (Red) ---
+//		WS2812_SetBrightness(40);
+//		Draw_Bitmap(font_R, 255, 0, 0);
+//		Speaker_Set_Tone(659, 10); // E5
+//		HAL_Delay(600);
+//
+//		WS2812_Clear(); WS2812_Send();
+//		HAL_Delay(100);
+//
+//		// --- Display 'K' (Green) ---
+//		WS2812_SetBrightness(40);
+//		Draw_Bitmap(font_K, 0, 50, 0);
+//		Speaker_Set_Tone(784, 10); // G5
+//		HAL_Delay(600);
+//
+//		WS2812_Clear(); WS2812_Send();
+//		HAL_Delay(500);
+      // Вверх: 200 -> 3000 Гц
+      for (uint16_t freq = 200; freq <= 800; freq += 10)
+      {
+          Speaker_Set_Tone(freq, 10);   // 10 = громкость/скважность (как у тебя)
+          HAL_Delay(300);                // скорость перебора
+      }
 
-		WS2812_Clear(); WS2812_Send(); // Blink off briefly
-		HAL_Delay(100);
+      // Вниз: 3000 -> 200 Гц
+      for (int16_t freq = 800; freq >= 200; freq -= 10)
+      {
+          Speaker_Set_Tone(freq, 10);
+          HAL_Delay(300);
+      }
 
-		// --- Display 'R' (Red) ---
-		WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_R, 255, 0, 0);
-		Speaker_Set_Tone(659, 10); // E5
-		HAL_Delay(600);
+      // Короткая пауза между циклами
+      Speaker_Set_Tone(0, 0);
+      HAL_Delay(300);
 
-		WS2812_Clear(); WS2812_Send();
-		HAL_Delay(100);
-
-		// --- Display 'K' (Green) ---
-		WS2812_SetBrightness(40);
-		Draw_Bitmap(Letter_K, 0, 50, 0);
-		Speaker_Set_Tone(784, 10); // G5
-		HAL_Delay(600);
-
-		WS2812_Clear(); WS2812_Send();
-		HAL_Delay(500);
   }
 }
     /* USER CODE END WHILE */
