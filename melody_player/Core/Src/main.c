@@ -25,6 +25,8 @@
 #include "ws2812.h"
 #include "font8x8.h"
 #include "melodies.h"
+#include "bt.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,8 +52,7 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-player_state_t player_state = STATE_STOPPED;
-
+bt_context_t bt_ctx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,7 +69,262 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
+typedef enum {
+    SYS_STOPPED = 0,
+    SYS_PLAYING
+} system_state_t;
+
+system_state_t system_state = SYS_STOPPED;
+
+
+typedef struct {
+    uint8_t  melody_id;
+    uint16_t step_index;
+    uint32_t step_time_left_ms;
+    uint16_t current_freq;
+} player_ctx_t;
+
+player_ctx_t player = {
+    .melody_id = 0,
+    .step_index = 0,
+    .step_time_left_ms = 0,
+    .current_freq = 0
+};
+
+
+// ===== LED MODE 2: Spectral Wave =====
+static uint8_t wave_buf[8][8];   // инерция яркости
+static uint8_t wave_phase = 0;
+static uint8_t wave_div = 0;
+static uint8_t hills[8][8];   // яркость пикселей
+
+
+static uint8_t height_from_freq(uint16_t freq)
+{
+    if (freq == 0) return 0;
+
+    if (freq < 300) return 2;
+    if (freq < 400) return 3;
+    if (freq < 500) return 4;
+    if (freq < 600) return 5;
+    if (freq < 700) return 6;
+    return 7;
+}
+
+
+
+static void color_from_height_xy(uint8_t y, uint8_t x,
+                                 uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    // y: 0 (низ) ... 7 (верх)
+
+    // --- ВЕРТИКАЛЬНЫЙ ГРАДИЕНТ ---
+    // желтый -> оранжевый -> красный
+    const uint8_t r0 = 255, g0 = 255, b0 = 0;    // низ (желтый)
+    const uint8_t r1 = 255, g1 = 140, b1 = 0;    // середина (оранжевый)
+    const uint8_t r2 = 255, g2 = 0,   b2 = 0;    // верх (красный)
+
+    uint8_t ty = (y * 255) / 7;
+
+    uint8_t br, bg, bb;
+
+    if (ty < 128) {
+        // низ -> середина
+        uint8_t t = ty * 2;
+        br = r0 + ((r1 - r0) * t >> 8);
+        bg = g0 + ((g1 - g0) * t >> 8);
+        bb = b0 + ((b1 - b0) * t >> 8);
+    } else {
+        // середина -> верх
+        uint8_t t = (ty - 128) * 2;
+        br = r1 + ((r2 - r1) * t >> 8);
+        bg = g1 + ((g2 - g1) * t >> 8);
+        bb = b1 + ((b2 - b1) * t >> 8);
+    }
+
+    // --- ЛЁГКАЯ ЯРКОСТЬ ПО X (не цвет!) ---
+    uint8_t lum = 170 + (x * 80) / 7;   // 170..250
+
+    *r = (br * lum) >> 8;
+    *g = (bg * lum) >> 8;
+    *b = (bb * lum) >> 8;
+}
+
+static const uint8_t RK_bitmap[8] = {
+		 	0b00000000, // y = 0
+		    0b11101001, // y = 1   R R R . | K . . K
+		    0b10011010, // y = 2   R . . R | K . K .
+		    0b11101100, // y = 3   R R R . | K K . .
+		    0b11001010, // y = 4   R R . . | K . K .
+		    0b10101001, // y = 5   R . R . | K . . K
+		    0b10011001, // y = 6   R . . R | K . . K
+		    0b00000000  // y = 7
+};
+
+
+
+void scheduler_tick_1ms(void)
+{
+    if (system_state != SYS_PLAYING)
+        return;
+
+    if (player.step_time_left_ms > 0) {
+        player.step_time_left_ms--;
+        return;
+    }
+
+    const melody_t *m = &g_melodies[player.melody_id];
+
+    if (player.step_index >= m->length) {
+        player.step_index = 0;   // loop мелодии
+        return;
+    }
+
+    const melody_step_t *step = &m->steps[player.step_index];
+
+    // --- AUDIO ---
+    player.current_freq = step->freq_hz;
+    Speaker_Set_Tone(step->freq_hz, 80);
+
+    // --- LED (ТОЛЬКО ПО MODE) ---
+    if (bt_ctx.led_mode == 0) {
+        // режим 0 — цвет по частоте
+        WS2812_ShowNoteColor(player.current_freq);
+    }
+    else if (bt_ctx.led_mode == 1) {
+
+        // --- 1. Сдвиг всей карты вправо ---
+        for (int y = 0; y < 8; y++) {
+            for (int x = 7; x > 0; x--) {
+                hills[y][x] = hills[y][x - 1];
+            }
+            hills[y][0] = 0;
+        }
+
+        // --- 2. Новая "гора" слева ---
+        uint8_t h = height_from_freq(player.current_freq);
+
+        for (int y = 0; y < h; y++) {
+            hills[7 - y][0] = 1;   // логическое "есть пиксель"
+        }
+
+        // --- 3. Получаем цвет как в MODE 0 ---
+        uint8_t r = 0, g = 0, b = 0;
+        WS2812_Clear();
+
+        // Используем ту же карту, что и MODE 0
+        // (просто берём цвет текущей ноты)
+        for (int i = 0; i < MAX_LED; i++) {
+            // временно заполним, потом перерисуем
+            Set_LED(i, 0, 0, 0);
+        }
+
+        WS2812_ShowNoteColor(player.current_freq);
+
+        // --- 4. Перерисовываем только нужные пиксели ---
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (hills[y][x]) {
+                    // Берём цвет ноты
+                    // WS2812_ShowNoteColor уже его выставил,
+                    // поэтому просто оставляем пиксель включённым
+                    // (ничего не делаем)
+                } else {
+                    Set_LED_XY(x, y, 0, 0, 0);
+                }
+            }
+        }
+
+        WS2812_Send();
+    }
+
+    else if (bt_ctx.led_mode == 2) {
+
+        // --- 1. Сдвиг всей карты вправо ---
+        for (int y = 0; y < 8; y++) {
+            for (int x = 7; x > 0; x--) {
+                hills[y][x] = hills[y][x - 1];
+            }
+            hills[y][0] = 0;
+        }
+
+        // --- 2. Новая "гора" слева ---
+        uint8_t h = height_from_freq(player.current_freq);
+
+        for (int y = 0; y < h; y++) {
+            hills[7 - y][0] = 255;   // снизу вверх
+        }
+
+        // --- 3. Отрисовка с ВЕРТИКАЛЬНЫМ ГРАДИЕНТОМ ---
+        WS2812_Clear();
+
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (hills[y][x]) {
+
+                    uint8_t r, g, b;
+                    uint8_t gy = 7 - y;   // инверсия по вертикали
+                    color_from_height_xy(gy, x, &r, &g, &b);
+
+
+
+                    Set_LED_XY(x, y, r, g, b);
+                }
+            }
+        }
+
+        WS2812_Send();
+    }
+
+    else if (bt_ctx.led_mode == 3) {
+
+        static uint8_t toggle = 0;
+
+        if (toggle) {
+            WS2812_Clear();
+            WS2812_Send();
+        } else {
+
+            // 1. Сначала применяем цвет как в MODE 0
+            WS2812_ShowNoteColor(player.current_freq);
+
+            // 2. Маскируем всё, кроме букв RK
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+
+                    // Проверяем бит bitmap
+                    if (!(RK_bitmap[y] & (1 << (7 - x)))) {
+                        Set_LED_XY(x, y, 0, 0, 0);
+                    }
+                }
+            }
+
+            WS2812_Send();
+        }
+
+        toggle ^= 1;
+    }
+
+    // --- NEXT STEP ---
+    player.step_time_left_ms = step->dur_ms;
+    player.step_index++;
+}
+
+
+
+
+
+
+
+
+
+
 /* USER CODE END 0 */
+
+
+
+
 
 /**
   * @brief  The application entry point.
@@ -106,54 +362,42 @@ int main(void)
   /* USER CODE BEGIN 2 */
   Speaker_Init(&htim2, TIM_CHANNEL_2);
   WS2812_Init();
+  bt_init(&huart2, &bt_ctx);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  player_state = STATE_PLAYING;
-
   while (1)
   {
-      switch (player_state)
-      {
-          case STATE_STOPPED:
+      bt_process_rx();
+
+      if (bt_has_new_command()) {
+
+          if (bt_ctx.state == BT_STATE_PLAYING) {
+              system_state = SYS_PLAYING;
+              player.melody_id = bt_ctx.melody_id % MELODY_COUNT;
+              player.step_index = 0;
+              player.step_time_left_ms = 0;
+
+              memset(hills, 0, sizeof(hills));
+
+              // --- RESET LED WAVE ---
+              memset(wave_buf, 0, sizeof(wave_buf));
+              wave_phase = 0;
+              wave_div = 0;
+          }
+          else {
+              system_state = SYS_STOPPED;
               Speaker_Set_Tone(0, 0);
+              player.current_freq = 0;
               WS2812_Clear();
               WS2812_Send();
-              HAL_Delay(100);
-              break;
-
-          case STATE_PLAYING:
-          {
-              const melody_t *myMelody = &g_melodies[0];
-
-              for (int i = 0; i < myMelody->length; i++) {
-                  uint16_t f = myMelody->steps[i].freq_hz;
-                  uint16_t d = myMelody->steps[i].dur_ms;
-
-                  Speaker_Set_Tone(f, 10);
-                  WS2812_ShowNoteColor(f);
-                  HAL_Delay(d);
-              }
-
-              Speaker_Set_Tone(0, 0);
-              WS2812_Clear();
-              WS2812_Send();
-
-              player_state = STATE_STOPPED;  // ← ВАЖНО
-              break;
           }
 
-          case STATE_PAUSED:
-              Speaker_Set_Tone(0, 0);
-              HAL_Delay(100);
-              break;
+          bt_clear_new_command_flag();
       }
   }
-
-//	  // Example: Playing the first melody in g_melodies
-
 
 }
     /* USER CODE END WHILE */
@@ -161,7 +405,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
@@ -172,6 +416,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -302,6 +547,7 @@ static void MX_TIM2_Init(void)
 
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
+
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
