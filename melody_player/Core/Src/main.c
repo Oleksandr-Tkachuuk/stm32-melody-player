@@ -112,6 +112,23 @@ static uint8_t height_from_freq(uint16_t freq)
     return 7;
 }
 
+static void note_color_from_freq(uint16_t freq,
+                                 uint8_t *r,
+                                 uint8_t *g,
+                                 uint8_t *b)
+{
+    if (freq == 0) {
+        *r = *g = *b = 0;
+        return;
+    }
+
+    if (freq < 300)      { *r = 255; *g = 0;   *b = 0;   }
+    else if (freq < 350) { *r = 255; *g = 127; *b = 0;   }
+    else if (freq < 400) { *r = 255; *g = 255; *b = 0;   }
+    else if (freq < 450) { *r = 0;   *g = 255; *b = 0;   }
+    else if (freq < 550) { *r = 0;   *g = 0;   *b = 255; }
+    else                 { *r = 75;  *g = 0;   *b = 130; }
+}
 
 
 static void color_from_height_xy(uint8_t y, uint8_t x,
@@ -151,50 +168,79 @@ static void color_from_height_xy(uint8_t y, uint8_t x,
     *b = (bb * lum) >> 8;
 }
 
-static const uint8_t RK_bitmap[8] = {
-		 	0b00000000, // y = 0
-		    0b11101001, // y = 1   R R R . | K . . K
-		    0b10011010, // y = 2   R . . R | K . K .
-		    0b11101100, // y = 3   R R R . | K K . .
-		    0b11001010, // y = 4   R R . . | K . K .
-		    0b10101001, // y = 5   R . R . | K . . K
-		    0b10011001, // y = 6   R . . R | K . . K
-		    0b00000000  // y = 7
-};
+static void draw_R_scaled_left(uint8_t r, uint8_t g, uint8_t b)
+{
+    for (int y = 0; y < 8; y++) {
+        uint8_t row = font_R[y];
+
+        for (int dx = 0; dx < 4; dx++) {
+            int sx = dx * 2;           // ← масштабирование
+            if (row & (1 << (7 - sx))) {
+                Set_LED_XY(dx, y, r, g, b);
+            }
+        }
+    }
+}
 
 
 
-void scheduler_tick_1ms(void)
+static void draw_K_scaled_right(uint8_t r, uint8_t g, uint8_t b)
+{
+    for (int y = 0; y < 8; y++) {
+        uint8_t row = font_K[y];
+
+        for (int dx = 0; dx < 4; dx++) {
+            int sx = dx * 2;
+            if (row & (1 << (7 - sx))) {
+                Set_LED_XY(dx + 4, y, r, g, b);
+            }
+        }
+    }
+}
+
+
+static int scheduler_ready_for_step(void)
 {
     if (system_state != SYS_PLAYING)
-        return;
+        return 0;
 
     if (player.step_time_left_ms > 0) {
         player.step_time_left_ms--;
-        return;
+        return 0;
     }
 
+    return 1;
+}
+
+static const melody_step_t* get_current_step(void)
+{
     const melody_t *m = &g_melodies[player.melody_id];
 
     if (player.step_index >= m->length) {
-        player.step_index = 0;   // loop мелодии
-        return;
+        player.step_index = 0;
+        return NULL;
     }
 
-    const melody_step_t *step = &m->steps[player.step_index];
+    return &m->steps[player.step_index];
+}
 
-    // --- AUDIO ---
+static void process_audio(const melody_step_t *step)
+{
     player.current_freq = step->freq_hz;
     Speaker_Set_Tone(step->freq_hz, 80);
+}
 
-    // --- LED (ТОЛЬКО ПО MODE) ---
-    if (bt_ctx.led_mode == 0) {
-        // режим 0 — цвет по частоте
+static void process_led(uint8_t mode)
+{
+    // ===== MODE 0 =====
+    if (mode == 0) {
         WS2812_ShowNoteColor(player.current_freq);
     }
-    else if (bt_ctx.led_mode == 1) {
 
-        // --- 1. Сдвиг всей карты вправо ---
+    // ===== MODE 1 =====
+    else if (mode == 1) {
+
+        // 1. Сдвиг вправо
         for (int y = 0; y < 8; y++) {
             for (int x = 7; x > 0; x--) {
                 hills[y][x] = hills[y][x - 1];
@@ -202,35 +248,20 @@ void scheduler_tick_1ms(void)
             hills[y][0] = 0;
         }
 
-        // --- 2. Новая "гора" слева ---
+        // 2. Новая колонка слева
         uint8_t h = height_from_freq(player.current_freq);
-
         for (int y = 0; y < h; y++) {
-            hills[7 - y][0] = 1;   // логическое "есть пиксель"
+            hills[7 - y][0] = 1;
         }
 
-        // --- 3. Получаем цвет как в MODE 0 ---
-        uint8_t r = 0, g = 0, b = 0;
+        // 3. Цвет как в MODE 0
         WS2812_Clear();
-
-        // Используем ту же карту, что и MODE 0
-        // (просто берём цвет текущей ноты)
-        for (int i = 0; i < MAX_LED; i++) {
-            // временно заполним, потом перерисуем
-            Set_LED(i, 0, 0, 0);
-        }
-
         WS2812_ShowNoteColor(player.current_freq);
 
-        // --- 4. Перерисовываем только нужные пиксели ---
+        // 4. Оставляем только нужные пиксели
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                if (hills[y][x]) {
-                    // Берём цвет ноты
-                    // WS2812_ShowNoteColor уже его выставил,
-                    // поэтому просто оставляем пиксель включённым
-                    // (ничего не делаем)
-                } else {
+                if (!hills[y][x]) {
                     Set_LED_XY(x, y, 0, 0, 0);
                 }
             }
@@ -239,9 +270,10 @@ void scheduler_tick_1ms(void)
         WS2812_Send();
     }
 
-    else if (bt_ctx.led_mode == 2) {
+    // ===== MODE 2 =====
+    else if (mode == 2) {
 
-        // --- 1. Сдвиг всей карты вправо ---
+        // 1. Сдвиг вправо
         for (int y = 0; y < 8; y++) {
             for (int x = 7; x > 0; x--) {
                 hills[y][x] = hills[y][x - 1];
@@ -249,26 +281,21 @@ void scheduler_tick_1ms(void)
             hills[y][0] = 0;
         }
 
-        // --- 2. Новая "гора" слева ---
+        // 2. Новая колонка слева
         uint8_t h = height_from_freq(player.current_freq);
-
         for (int y = 0; y < h; y++) {
-            hills[7 - y][0] = 255;   // снизу вверх
+            hills[7 - y][0] = 255;
         }
 
-        // --- 3. Отрисовка с ВЕРТИКАЛЬНЫМ ГРАДИЕНТОМ ---
+        // 3. Вертикальный градиент
         WS2812_Clear();
 
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
                 if (hills[y][x]) {
-
                     uint8_t r, g, b;
-                    uint8_t gy = 7 - y;   // инверсия по вертикали
+                    uint8_t gy = 7 - y;
                     color_from_height_xy(gy, x, &r, &g, &b);
-
-
-
                     Set_LED_XY(x, y, r, g, b);
                 }
             }
@@ -277,39 +304,40 @@ void scheduler_tick_1ms(void)
         WS2812_Send();
     }
 
-    else if (bt_ctx.led_mode == 3) {
+    // ===== MODE 3 (RK) =====
+    else if (mode == 3) {
 
-        static uint8_t toggle = 0;
+        uint8_t r, g, b;
+        note_color_from_freq(player.current_freq, &r, &g, &b);
 
-        if (toggle) {
-            WS2812_Clear();
-            WS2812_Send();
-        } else {
-
-            // 1. Сначала применяем цвет как в MODE 0
-            WS2812_ShowNoteColor(player.current_freq);
-
-            // 2. Маскируем всё, кроме букв RK
-            for (int y = 0; y < 8; y++) {
-                for (int x = 0; x < 8; x++) {
-
-                    // Проверяем бит bitmap
-                    if (!(RK_bitmap[y] & (1 << (7 - x)))) {
-                        Set_LED_XY(x, y, 0, 0, 0);
-                    }
-                }
-            }
-
-            WS2812_Send();
-        }
-
-        toggle ^= 1;
+        WS2812_Clear();
+        draw_R_scaled_left(r, g, b);
+        draw_K_scaled_right(r, g, b);
+        WS2812_Send();
     }
+}
 
-    // --- NEXT STEP ---
+static void finish_step(const melody_step_t *step)
+{
     player.step_time_left_ms = step->dur_ms;
     player.step_index++;
 }
+
+
+void scheduler_tick_1ms(void)
+{
+    if (!scheduler_ready_for_step())
+        return;
+
+    const melody_step_t *step = get_current_step();
+    if (!step)
+        return;
+
+    process_audio(step);
+    process_led(bt_ctx.led_mode);
+    finish_step(step);
+}
+
 
 
 
