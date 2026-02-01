@@ -50,6 +50,7 @@ DMA_HandleTypeDef hdma_tim1_ch1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+player_state_t player_state = STATE_STOPPED;
 
 /* USER CODE END PV */
 
@@ -110,38 +111,57 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  player_state = STATE_PLAYING;
+
   while (1)
   {
-//	  // Example: Playing the first melody in g_melodies
-	  const melody_t *myMelody = &g_melodies[0];
+      switch (player_state)
+      {
+          case STATE_STOPPED:
+              Speaker_Set_Tone(0, 0);
+              WS2812_Clear();
+              WS2812_Send();
+              HAL_Delay(100);
+              break;
 
-	  for (int i = 0; i < myMelody->length; i++) {
-	      uint16_t f = myMelody->steps[i].freq_hz;
-	      uint16_t d = myMelody->steps[i].dur_ms;
+          case STATE_PLAYING:
+          {
+              const melody_t *myMelody = &g_melodies[0];
 
-	      // 1. Play Tone
-	      Speaker_Set_Tone(f, 10);
+              for (int i = 0; i < myMelody->length; i++) {
+                  uint16_t f = myMelody->steps[i].freq_hz;
+                  uint16_t d = myMelody->steps[i].dur_ms;
 
-	      // 2. Map frequency to color and update matrix
-	      WS2812_ShowNoteColor(f);
+                  Speaker_Set_Tone(f, 10);
+                  WS2812_ShowNoteColor(f);
+                  HAL_Delay(d);
+              }
 
-	      // 3. Wait for the duration of the note
-	      HAL_Delay(d);
-	  }
+              Speaker_Set_Tone(0, 0);
+              WS2812_Clear();
+              WS2812_Send();
 
-	  // Stop everything after melody
-	  Speaker_Set_Tone(0, 0);
-	  WS2812_Clear();
-	  WS2812_Send();
+              player_state = STATE_STOPPED;  // ← ВАЖНО
+              break;
+          }
 
+          case STATE_PAUSED:
+              Speaker_Set_Tone(0, 0);
+              HAL_Delay(100);
+              break;
+      }
   }
+
+//	  // Example: Playing the first melody in g_melodies
+
+
 }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
   /* USER CODE END 3 */
-
+}
 
 /**
   * @brief System Clock Configuration
