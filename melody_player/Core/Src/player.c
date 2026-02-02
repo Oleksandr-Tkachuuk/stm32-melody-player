@@ -20,7 +20,6 @@ static player_ctx_t player = {0};
 static uint8_t hills[8][8];
 static uint32_t mode3_timer_ms = 0;
 static uint8_t  mode3_letter_idx = 0;
-static uint8_t  lazy_tail[MAX_LED];
 
 static const uint8_t* mode3_letters[3] = { font_U, font_R, font_K };
 
@@ -135,61 +134,6 @@ static void process_audio(const melody_step_t *step)
     Speaker_Set_Tone(step->freq_hz, 80);
 }
 
-static uint8_t approach(uint8_t current, uint8_t target)
-{
-    if (current < target) return current + 1;
-    if (current > target) return current - 1;
-    return current;
-}
-
-static void led_mode_lazy_tail(uint16_t freq)
-{
-    uint8_t r, g, b;
-    note_color_from_freq(freq, &r, &g, &b);
-
-    // move tail
-    for (int i = MAX_LED - 1; i > 0; i--) {
-        lazy_tail[i] = lazy_tail[i - 1];
-    }
-
-    // head
-    lazy_tail[0] = 255;
-
-    WS2812_Clear();
-
-    // draw tail
-    for (int i = 0; i < MAX_LED; i++) {
-
-        if (lazy_tail[i] == 0)
-            continue;
-
-        uint8_t brightness;
-
-        if (i == 0)      brightness = 100;
-        else if (i == 1) brightness = 60;
-        else if (i == 2) brightness = 35;
-        else if (i == 3) brightness = 20;
-        else             brightness = 0;
-
-        if (brightness == 0)
-            lazy_tail[i] = 0;
-        else
-            lazy_tail[i] = (lazy_tail[i] * brightness) / 100;
-
-        Set_LED(
-            i,
-            (r * lazy_tail[i]) >> 8,
-            (g * lazy_tail[i]) >> 8,
-            (b * lazy_tail[i]) >> 8
-        );
-    }
-
-    WS2812_Send();
-}
-
-
-
-
 static void process_led(uint8_t mode)
 {
     // ===== MODE 0 =====
@@ -270,10 +214,6 @@ static void process_led(uint8_t mode)
     else if (mode == 3) {
         led_mode_letters_urk(player.current_freq);
     }
-
-   /* else if (mode == 4) {
-        led_mode_lazy_tail(player.current_freq);
-    }*/
 }
 
 static void finish_step(const melody_step_t *step)
@@ -285,7 +225,6 @@ static void finish_step(const melody_step_t *step)
 void Player_Init(void) {
     system_state = SYS_STOPPED;
     memset(hills, 0, sizeof(hills));
-    memset(lazy_tail, 0, sizeof(lazy_tail));
 }
 
 void Player_Start(uint8_t melody_id) {
@@ -293,7 +232,6 @@ void Player_Start(uint8_t melody_id) {
     player.melody_id = melody_id % MELODY_COUNT;
     player.step_index = 0;
     player.step_time_left_ms = 0;
-    memset(hills, 0, sizeof(hills));
     mode3_timer_ms = 0;
     mode3_letter_idx = 0;
 }
@@ -319,16 +257,6 @@ void scheduler_tick_1ms(void)
       }
   }
 
-    //
-    if (system_state == SYS_PLAYING) {
-
-        if (bt_ctx.led_mode == 4) {
-
-            led_mode_lazy_tail(player.current_freq);
-        }
-    }
-
-
     if (!scheduler_ready_for_step())
         return;
 
@@ -338,10 +266,7 @@ void scheduler_tick_1ms(void)
 
     process_audio(step);
 
-    // all modes only by freq
-    if (bt_ctx.led_mode != 4) {
-        process_led(bt_ctx.led_mode);
-    }
+	process_led(bt_ctx.led_mode);
 
     finish_step(step);
 }
