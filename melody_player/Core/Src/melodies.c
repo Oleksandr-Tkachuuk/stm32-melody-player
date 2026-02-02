@@ -68,13 +68,78 @@ static const melody_step_t melody4[] = {
   {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80}, /* A5 not defined; keep within range by using G5 instead */
 };
 
-/* Fix: keep within defined notes (<=800 Hz). Replace the A5 line with G5. */
-static const melody_step_t melody4_fixed[] = {
-  {NOTE_G4_HZ,120},{P,40},{NOTE_B4_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_G5_HZ,200},{P,80},
-  {NOTE_FS5_HZ,120},{P,40},{NOTE_E5_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80},
+/* -------- Melody 5 -------- */
+static const melody_step_t melody5[] = {
+  {NOTE_D5_HZ,160},
+  {NOTE_A5_HZ,160},
+  {NOTE_G5_HZ,160},
+  {NOTE_F5_HZ,160},
+  {NOTE_D5_HZ,160},
+  {P,3*160},
 
-  {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_G5_HZ,200},{P,80},
-  {NOTE_FS5_HZ,120},{P,40},{NOTE_E5_HZ,120},{P,40},{NOTE_CS5_HZ,160},{P,40},{NOTE_A4_HZ,240},{P,160},
+  {NOTE_D5_HZ,160},
+  {NOTE_A5_HZ,160},
+  {NOTE_G5_HZ,160},
+  {NOTE_F5_HZ,160},
+  {NOTE_D5_HZ,160},
+  {NOTE_F5_HZ,160},
+  {NOTE_G5_HZ,160},
+  {NOTE_A5_HZ,160},
+
+  {NOTE_D5_HZ,160},
+  {NOTE_F5_HZ,160},
+  {NOTE_G5_HZ,160},
+  {NOTE_A5_HZ,160},
+  {NOTE_D5_HZ,160},
+  {P,3*160},
+
+  {NOTE_D5_HZ,160},
+  {P,3*160},
+
+  {NOTE_D5_HZ,160},
+  {P,1*160},
+  {NOTE_D5_HZ,160},
+  {P,1*160},
+  {NOTE_D5_HZ,160},
+  {P,1*160},
+  {NOTE_D5_HZ,160},
+};
+
+static const melody_step_t melody6[] = {
+  /* E D# E D# E B D C A */
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_DS5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_DS5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_B4_HZ,160},{P,40},
+  {NOTE_D5_HZ,160},{P,40},
+  {NOTE_C5_HZ,160},{P,40},
+  {NOTE_A4_HZ,240},{P,80},
+
+  /* C E A B */
+  {NOTE_C5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_A4_HZ,160},{P,40},
+  {NOTE_B4_HZ,240},{P,80},
+
+  /* E G# B C */
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_GS5_HZ,160},{P,40},
+  {NOTE_B4_HZ,160},{P,40},
+  {NOTE_C5_HZ,240},{P,80},
+
+  /* E E D# E D# E B D C A */
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_DS5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_DS5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},
+  {NOTE_B4_HZ,160},{P,40},
+  {NOTE_D5_HZ,160},{P,40},
+  {NOTE_C5_HZ,160},{P,40},
+  {NOTE_A4_HZ,320},{P,160},
 };
 
 /* -------- Melody table -------- */
@@ -83,7 +148,9 @@ const melody_t g_melodies[] = {
   { melody1,       (uint16_t)(sizeof(melody1)       / sizeof(melody1[0])) },
   { melody2,       (uint16_t)(sizeof(melody2)       / sizeof(melody2[0])) },
   { melody3,       (uint16_t)(sizeof(melody3)       / sizeof(melody3[0])) },
-  { melody4_fixed, (uint16_t)(sizeof(melody4_fixed) / sizeof(melody4_fixed[0])) },
+  { melody4,       (uint16_t)(sizeof(melody4)       / sizeof(melody4[0])) },
+  { melody5,       (uint16_t)(sizeof(melody5)       / sizeof(melody5[0])) },
+  { melody6,       (uint16_t)(sizeof(melody6)       / sizeof(melody6[0])) },
 };
 
 const uint8_t MELODY_COUNT =
