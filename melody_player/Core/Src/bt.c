@@ -162,7 +162,7 @@ static void bt_parse_line(char *line)
                 bt_reply_ok();
                 s_new_cmd = 1;
             } else {
-                bt_reply_err("Melody ID out of range (0-255)");
+                bt_reply_err("Melody ID out of range (0-6)");
             }
         } else {
             bt_reply_err("Usage: SET <number>");
