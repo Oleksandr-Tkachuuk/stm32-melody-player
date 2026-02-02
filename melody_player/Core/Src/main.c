@@ -78,6 +78,8 @@ typedef enum {
 system_state_t system_state = SYS_STOPPED;
 
 
+
+
 typedef struct {
     uint8_t  melody_id;
     uint16_t step_index;
@@ -98,6 +100,23 @@ static uint8_t wave_buf[8][8];   // инерция яркости
 static uint8_t wave_phase = 0;
 static uint8_t wave_div = 0;
 static uint8_t hills[8][8];   // яркость пикселей
+// ===== LED MODE 4: Lazy Tail =====
+static int8_t lazy_pos = 0;
+// цвет хвоста (инерционный)
+static uint8_t tail_r = 0;
+static uint8_t tail_g = 0;
+static uint8_t tail_b = 0;
+static uint8_t lazy_tail[MAX_LED];   // 0..255
+// ===== MODE 3: Letter Cycle (URK) =====
+static uint32_t mode3_timer_ms = 0;
+static uint8_t  mode3_letter_idx = 0;
+
+// порядок букв
+static const uint8_t* mode3_letters[3] = {
+    font_U,
+    font_R,
+    font_K
+};
 
 
 static uint8_t height_from_freq(uint16_t freq)
@@ -168,35 +187,16 @@ static void color_from_height_xy(uint8_t y, uint8_t x,
     *b = (bb * lum) >> 8;
 }
 
-static void draw_R_scaled_left(uint8_t r, uint8_t g, uint8_t b)
-{
-    for (int y = 0; y < 8; y++) {
-        uint8_t row = font_R[y];
 
-        for (int dx = 0; dx < 4; dx++) {
-            int sx = dx * 2;           // ← масштабирование
-            if (row & (1 << (7 - sx))) {
-                Set_LED_XY(dx, y, r, g, b);
-            }
-        }
-    }
+static void led_mode_letters_urk(uint16_t freq)
+{
+    uint8_t r, g, b;
+    note_color_from_freq(freq, &r, &g, &b);
+
+    // рисуем текущую букву
+    Draw_Bitmap(mode3_letters[mode3_letter_idx], r, g, b);
 }
 
-
-
-static void draw_K_scaled_right(uint8_t r, uint8_t g, uint8_t b)
-{
-    for (int y = 0; y < 8; y++) {
-        uint8_t row = font_K[y];
-
-        for (int dx = 0; dx < 4; dx++) {
-            int sx = dx * 2;
-            if (row & (1 << (7 - sx))) {
-                Set_LED_XY(dx + 4, y, r, g, b);
-            }
-        }
-    }
-}
 
 
 static int scheduler_ready_for_step(void)
@@ -230,6 +230,61 @@ static void process_audio(const melody_step_t *step)
     Speaker_Set_Tone(step->freq_hz, 80);
 }
 
+static uint8_t approach(uint8_t current, uint8_t target)
+{
+    if (current < target) return current + 1;
+    if (current > target) return current - 1;
+    return current;
+}
+
+static void led_mode_lazy_tail(uint16_t freq)
+{
+    uint8_t r, g, b;
+    note_color_from_freq(freq, &r, &g, &b);
+
+    // --- 1. Сдвиг хвоста ---
+    for (int i = MAX_LED - 1; i > 0; i--) {
+        lazy_tail[i] = lazy_tail[i - 1];
+    }
+
+    // --- 2. Голова ---
+    lazy_tail[0] = 255;
+
+    WS2812_Clear();
+
+    // --- 3. Отрисовка хвоста ---
+    for (int i = 0; i < MAX_LED; i++) {
+
+        if (lazy_tail[i] == 0)
+            continue;
+
+        uint8_t brightness;
+
+        if (i == 0)      brightness = 100;
+        else if (i == 1) brightness = 60;
+        else if (i == 2) brightness = 35;
+        else if (i == 3) brightness = 20;
+        else             brightness = 0;
+
+        if (brightness == 0)
+            lazy_tail[i] = 0;
+        else
+            lazy_tail[i] = (lazy_tail[i] * brightness) / 100;
+
+        Set_LED(
+            i,
+            (r * lazy_tail[i]) >> 8,
+            (g * lazy_tail[i]) >> 8,
+            (b * lazy_tail[i]) >> 8
+        );
+    }
+
+    WS2812_Send();
+}
+
+
+
+
 static void process_led(uint8_t mode)
 {
     // ===== MODE 0 =====
@@ -240,7 +295,7 @@ static void process_led(uint8_t mode)
     // ===== MODE 1 =====
     else if (mode == 1) {
 
-        // 1. Сдвиг вправо
+        // --- 1. Сдвиг вправо ---
         for (int y = 0; y < 8; y++) {
             for (int x = 7; x > 0; x--) {
                 hills[y][x] = hills[y][x - 1];
@@ -248,28 +303,30 @@ static void process_led(uint8_t mode)
             hills[y][0] = 0;
         }
 
-        // 2. Новая колонка слева
+        // --- 2. Новая колонка слева ---
         uint8_t h = height_from_freq(player.current_freq);
         for (int y = 0; y < h; y++) {
             hills[7 - y][0] = 1;
         }
 
-        // 3. Цвет как в MODE 0
-        WS2812_Clear();
-        WS2812_ShowNoteColor(player.current_freq);
+        // --- 3. Цвет как в MODE 0 ---
+        uint8_t r, g, b;
+        note_color_from_freq(player.current_freq, &r, &g, &b);
 
-        // 4. Оставляем только нужные пиксели
+        // --- 4. Рисуем ТОЛЬКО активные пиксели ---
+        WS2812_Clear();
+
         for (int y = 0; y < 8; y++) {
             for (int x = 0; x < 8; x++) {
-                if (!hills[y][x]) {
-                    Set_LED_XY(x, y, 0, 0, 0);
+                if (hills[y][x]) {
+                    Set_LED_XY(x, y, r, g, b);
                 }
             }
         }
 
+
         WS2812_Send();
     }
-
     // ===== MODE 2 =====
     else if (mode == 2) {
 
@@ -306,15 +363,12 @@ static void process_led(uint8_t mode)
 
     // ===== MODE 3 (RK) =====
     else if (mode == 3) {
-
-        uint8_t r, g, b;
-        note_color_from_freq(player.current_freq, &r, &g, &b);
-
-        WS2812_Clear();
-        draw_R_scaled_left(r, g, b);
-        draw_K_scaled_right(r, g, b);
-        WS2812_Send();
+        led_mode_letters_urk(player.current_freq);
     }
+
+   /* else if (mode == 4) {
+        led_mode_lazy_tail(player.current_freq);
+    }*/
 }
 
 static void finish_step(const melody_step_t *step)
@@ -324,8 +378,30 @@ static void finish_step(const melody_step_t *step)
 }
 
 
+
 void scheduler_tick_1ms(void)
 {
+  // ===== MODE 3 letter timer =====
+  if (system_state == SYS_PLAYING && bt_ctx.led_mode == 3) {
+      mode3_timer_ms++;
+      if (mode3_timer_ms >= 1000) {   // 1 секунда
+          mode3_timer_ms = 0;
+          mode3_letter_idx++;
+          if (mode3_letter_idx >= 3)
+              mode3_letter_idx = 0;
+      }
+  }
+
+    // --- LED ЖИВУТ ВСЕГДА ---
+    if (system_state == SYS_PLAYING) {
+
+        if (bt_ctx.led_mode == 4) {
+            // lazy tail обновляется КАЖДУЮ МС
+            led_mode_lazy_tail(player.current_freq);
+        }
+    }
+
+    // --- АУДИО ТОЛЬКО ПО ШАГАМ ---
     if (!scheduler_ready_for_step())
         return;
 
@@ -334,7 +410,12 @@ void scheduler_tick_1ms(void)
         return;
 
     process_audio(step);
-    process_led(bt_ctx.led_mode);
+
+    // остальные LED-моды (0–3) — ТОЛЬКО ПО НОТАМ
+    if (bt_ctx.led_mode != 4) {
+        process_led(bt_ctx.led_mode);
+    }
+
     finish_step(step);
 }
 
@@ -414,6 +495,11 @@ int main(void)
               memset(wave_buf, 0, sizeof(wave_buf));
               wave_phase = 0;
               wave_div = 0;
+              lazy_pos = 0;
+              tail_r = tail_g = tail_b = 0;
+              mode3_timer_ms = 0;
+              mode3_letter_idx = 0;
+
           }
           else {
               system_state = SYS_STOPPED;
@@ -560,6 +646,7 @@ static void MX_TIM1_Init(void)
   HAL_TIM_MspPostInit(&htim1);
 
 }
+
 
 /**
   * @brief TIM2 Initialization Function
