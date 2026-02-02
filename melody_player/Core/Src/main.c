@@ -203,14 +203,14 @@ int main(void)
     for (uint16_t i = 0; i < m->length; i++) {
 
       if (m->steps[i].freq_hz == 0)
-        Speaker_Stop();
+    	  Speaker_Set_Tone(0,0);
       else
         Speaker_Set_Tone(m->steps[i].freq_hz, 10);
 
       HAL_Delay(m->steps[i].dur_ms);
     }
 
-    Speaker_Stop();
+//    Speaker_Stop();
     HAL_Delay(500);
   }
 }
@@ -219,7 +219,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
   /* USER CODE END 3 */
-
+}
 
 /**
   * @brief System Clock Configuration
@@ -476,11 +476,11 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+    /* User can add his own implementation to report the HAL error return state */
+    __disable_irq();
+    while (1)
+    {
+    }
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
@@ -494,8 +494,8 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* User can add his own implementation to report the file name and line number,
+       ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
