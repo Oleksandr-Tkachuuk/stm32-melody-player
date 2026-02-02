@@ -42,6 +42,10 @@
 #define NOTE_F5_HZ     698u
 #define NOTE_FS5_HZ    740u
 #define NOTE_G5_HZ     784u
+#define NOTE_A5_HZ     880u
+#define NOTE_DS5_HZ    622u
+#define NOTE_GS5_HZ    831u
+
 
 
 /* One tone step */
