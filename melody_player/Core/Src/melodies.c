@@ -8,17 +8,9 @@
 
 #include "melodies.h"
 
-/* Common rhythm helpers (durations in ms):
- *  80  = very short (staccato)
- * 120  = short
- * 160  = 1/8-ish
- * 240  = 1/4-ish
- * 320  = long
- */
-
 #define P NOTE_PAUSE_HZ
 
-/* -------- Melody 0: "Overworld Loop" (bright arpeggios) -------- */
+/* -------- Melody 0 -------- */
 static const melody_step_t melody0[] = {
   {NOTE_C4_HZ,120},{P,40},{NOTE_E4_HZ,120},{P,40},{NOTE_G4_HZ,160},{P,40},{NOTE_C5_HZ,240},{P,80},
   {NOTE_B4_HZ,120},{P,40},{NOTE_G4_HZ,120},{P,40},{NOTE_E4_HZ,160},{P,40},{NOTE_G4_HZ,240},{P,80},
@@ -30,7 +22,7 @@ static const melody_step_t melody0[] = {
   {NOTE_D5_HZ,120},{P,40},{NOTE_B4_HZ,120},{P,40},{NOTE_G4_HZ,160},{P,40},{NOTE_B4_HZ,240},{P,120},
 };
 
-/* -------- Melody 1: "Boss Alert" (tense, repeating motif) -------- */
+/* -------- Melody 1 -------- */
 static const melody_step_t melody1[] = {
   {NOTE_E4_HZ,160},{NOTE_DS4_HZ,160},{NOTE_E4_HZ,160},{NOTE_DS4_HZ,160},{NOTE_E4_HZ,240},{P,80},
   {NOTE_B3_HZ,160},{NOTE_C4_HZ,160},{NOTE_CS4_HZ,160},{NOTE_D4_HZ,160},{NOTE_DS4_HZ,240},{P,80},
@@ -42,14 +34,14 @@ static const melody_step_t melody1[] = {
   {NOTE_G4_HZ,120},{P,40},{NOTE_FS4_HZ,120},{P,40},{NOTE_E4_HZ,120},{P,40},{NOTE_DS4_HZ,240},{P,160},
 };
 
-/* -------- Melody 2: "Victory Jingle" (short but busy) -------- */
+/* -------- Melody 2 -------- */
 static const melody_step_t melody2[] = {
   {NOTE_C5_HZ,120},{NOTE_E5_HZ,120},{NOTE_G5_HZ,160},{P,40},{NOTE_G5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},
   {NOTE_D5_HZ,120},{NOTE_F5_HZ,120},{NOTE_A4_HZ,160},{P,40},{NOTE_A4_HZ,120},{P,40},{NOTE_F5_HZ,160},{P,40},
   {NOTE_E5_HZ,120},{NOTE_G5_HZ,120},{NOTE_C5_HZ,240},{P,80},{NOTE_B4_HZ,120},{NOTE_G4_HZ,120},{NOTE_E4_HZ,320},{P,160},
 };
 
-/* -------- Melody 3: "Dungeon Walk" (minor-ish, stepping bass) -------- */
+/* -------- Melody 3 -------- */
 static const melody_step_t melody3[] = {
   {NOTE_A3_HZ,240},{P,40},{NOTE_E4_HZ,160},{P,40},{NOTE_A4_HZ,160},{P,40},{NOTE_G4_HZ,160},{P,40},
   {NOTE_A3_HZ,240},{P,40},{NOTE_E4_HZ,160},{P,40},{NOTE_A4_HZ,160},{P,40},{NOTE_G4_HZ,160},{P,80},
@@ -61,85 +53,30 @@ static const melody_step_t melody3[] = {
   {NOTE_A4_HZ,160},{P,40},{NOTE_G4_HZ,160},{P,40},{NOTE_E4_HZ,240},{P,160},
 };
 
-/* -------- Melody 4: "Menu/Select" (chippy, syncopated) -------- */
+/* -------- Melody 4 -------- */
 static const melody_step_t melody4[] = {
   {NOTE_G4_HZ,120},{P,40},{NOTE_B4_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_G5_HZ,200},{P,80},
   {NOTE_FS5_HZ,120},{P,40},{NOTE_E5_HZ,120},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80},
-  {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80}, /* A5 not defined; keep within range by using G5 instead */
+  {NOTE_A4_HZ,120},{P,40},{NOTE_CS5_HZ,120},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,200},{P,80},
 };
 
 /* -------- Melody 5 -------- */
 static const melody_step_t melody5[] = {
-  {NOTE_D5_HZ,160},
-  {NOTE_A5_HZ,160},
-  {NOTE_G5_HZ,160},
-  {NOTE_F5_HZ,160},
-  {NOTE_D5_HZ,160},
-  {P,3*160},
-
-  {NOTE_D5_HZ,160},
-  {NOTE_A5_HZ,160},
-  {NOTE_G5_HZ,160},
-  {NOTE_F5_HZ,160},
-  {NOTE_D5_HZ,160},
-  {NOTE_F5_HZ,160},
-  {NOTE_G5_HZ,160},
-  {NOTE_A5_HZ,160},
-
-  {NOTE_D5_HZ,160},
-  {NOTE_F5_HZ,160},
-  {NOTE_G5_HZ,160},
-  {NOTE_A5_HZ,160},
-  {NOTE_D5_HZ,160},
-  {P,3*160},
-
-  {NOTE_D5_HZ,160},
-  {P,3*160},
-
-  {NOTE_D5_HZ,160},
-  {P,1*160},
-  {NOTE_D5_HZ,160},
-  {P,1*160},
-  {NOTE_D5_HZ,160},
-  {P,1*160},
-  {NOTE_D5_HZ,160},
+  {NOTE_D5_HZ,160},{NOTE_A5_HZ,160},{NOTE_G5_HZ,160},{NOTE_F5_HZ,160},{NOTE_D5_HZ,160},{P,3*160},
+  {NOTE_D5_HZ,160},{NOTE_A5_HZ,160},{NOTE_G5_HZ,160},{NOTE_F5_HZ,160},{NOTE_D5_HZ,160},{NOTE_F5_HZ,160},{NOTE_G5_HZ,160},{NOTE_A5_HZ,160},
+  {NOTE_D5_HZ,160},{NOTE_F5_HZ,160},{NOTE_G5_HZ,160},{NOTE_A5_HZ,160},{NOTE_D5_HZ,160},{P,3*160},
+  {NOTE_D5_HZ,160},{P,3*160},
+  {NOTE_D5_HZ,160},{P,1*160},{NOTE_D5_HZ,160},{P,1*160},{NOTE_D5_HZ,160},{P,1*160},{NOTE_D5_HZ,160},
 };
 
+/* -------- Melody 6 -------- */
 static const melody_step_t melody6[] = {
-  /* E D# E D# E B D C A */
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_DS5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_DS5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_B4_HZ,160},{P,40},
-  {NOTE_D5_HZ,160},{P,40},
-  {NOTE_C5_HZ,160},{P,40},
-  {NOTE_A4_HZ,240},{P,80},
-
-  /* C E A B */
-  {NOTE_C5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_A4_HZ,160},{P,40},
-  {NOTE_B4_HZ,240},{P,80},
-
-  /* E G# B C */
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_GS5_HZ,160},{P,40},
-  {NOTE_B4_HZ,160},{P,40},
-  {NOTE_C5_HZ,240},{P,80},
-
-  /* E E D# E D# E B D C A */
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_DS5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_DS5_HZ,160},{P,40},
-  {NOTE_E5_HZ,160},{P,40},
-  {NOTE_B4_HZ,160},{P,40},
-  {NOTE_D5_HZ,160},{P,40},
-  {NOTE_C5_HZ,160},{P,40},
-  {NOTE_A4_HZ,320},{P,160},
+  {NOTE_E5_HZ,160},{P,40},{NOTE_DS5_HZ,160},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_DS5_HZ,160},{P,40},
+  {NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,160},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_C5_HZ,160},{P,40},{NOTE_A4_HZ,240},{P,80},
+  {NOTE_C5_HZ,160},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_A4_HZ,160},{P,40},{NOTE_B4_HZ,240},{P,80},
+  {NOTE_E5_HZ,160},{P,40},{NOTE_GS5_HZ,160},{P,40},{NOTE_B4_HZ,160},{P,40},{NOTE_C5_HZ,240},{P,80},
+  {NOTE_E5_HZ,160},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_DS5_HZ,160},{P,40},{NOTE_E5_HZ,160},{P,40},
+  {NOTE_DS5_HZ,160},{P,40},{NOTE_E5_HZ,160},{P,40},{NOTE_B4_HZ,160},{P,40},{NOTE_D5_HZ,160},{P,40},{NOTE_C5_HZ,160},{P,40},{NOTE_A4_HZ,320},{P,160},
 };
 
 /* -------- Melody table -------- */
