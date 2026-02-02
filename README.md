@@ -64,6 +64,9 @@ Spracovanie príkazov prebieha v reálnom čase alebo podľa aktívneho režimu 
 
 Táto kapitola popisuje fyzické zapojenie jednotlivých komponentov systému podľa priloženej schémy. Zapojenie je navrhnuté tak, aby bolo možné paralelne prehrávať zvuk, ovládať LED panel a komunikovať cez Bluetooth pri spoločnom napájaní a zdieľanej zemi.
 
+![Hardware connection diagram](docs/stm32_proj_zapojenie.png)
+
+
 ---
 
 ### Napájanie
@@ -174,3 +177,4 @@ Obsahuje implementáciu jednotlivých funkčných blokov:
 - systémové súbory STM32 (HAL, prerušenia, štart systému).
 
 ---
+
