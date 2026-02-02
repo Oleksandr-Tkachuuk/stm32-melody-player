@@ -122,7 +122,6 @@ int main(void)
 
       if (bt_has_new_command()) {
 		if (bt_ctx.state == BT_STATE_PLAYING) {
-			// The logic for resetting timers and hills is now inside this function
 			Player_Start(bt_ctx.melody_id);
 		}
 		else {

@@ -11,7 +11,6 @@
 static TIM_HandleTypeDef *s_htim = NULL;
 static uint32_t s_channel = 0;
 
-//hardcoded to actual system clock
 static const uint32_t TIM_CLK_HZ = 8000000UL;
 
 void Speaker_Init(TIM_HandleTypeDef *htim, uint32_t channel){

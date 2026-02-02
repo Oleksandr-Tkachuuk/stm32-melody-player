@@ -5,8 +5,6 @@
 #include "font8x8.h"
 #include <string.h>
 
-
-/* Private Types */
 typedef struct {
     uint8_t  melody_id;
     uint16_t step_index;
@@ -14,7 +12,6 @@ typedef struct {
     uint16_t current_freq;
 } player_ctx_t;
 
-/* Private Variables (Moved from main.c) */
 static system_state_t system_state = SYS_STOPPED;
 static player_ctx_t player = {0};
 static uint8_t hills[8][8];
@@ -23,7 +20,6 @@ static uint8_t  mode3_letter_idx = 0;
 
 static const uint8_t* mode3_letters[3] = { font_U, font_R, font_K };
 
-/* --- Private Internal Functions (Add 'static') --- */
 
 static uint8_t height_from_freq(uint16_t freq) {
     if (freq == 0) return 0;

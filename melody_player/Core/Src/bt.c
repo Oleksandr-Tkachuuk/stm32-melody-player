@@ -90,7 +90,28 @@ static void str_trim(char *s)
 }
 
 static void bt_reply_ok(void)  { bt_uart_send("OK\r\n"); }
-static void bt_reply_err(void) { bt_uart_send("ERR\r\n"); }
+
+static void bt_reply_err(const char *msg)
+{
+    if (msg) {
+        bt_uart_send("ERR: ");
+        bt_uart_send(msg);
+        bt_uart_send("\r\n");
+    } else {
+        bt_uart_send("ERR\r\n");
+    }
+}
+
+static void bt_print_help(void)
+{
+    bt_uart_send("\r\n--- Supported Commands ---\r\n");
+    bt_uart_send("START      : Start playing\r\n");
+    bt_uart_send("STOP       : Stop playing\r\n");
+    bt_uart_send("SET <n>    : Select melody (0-6)\r\n");
+    bt_uart_send("MODE <n>   : Select LED mode (0-3)\r\n");
+    bt_uart_send("STATUS     : Show current state\r\n");
+    bt_uart_send("HELP or ?  : Show this menu\r\n");
+}
 
 void bt_send_status(void)
 {
@@ -99,74 +120,77 @@ void bt_send_status(void)
   else                                 bt_uart_send("STOPPED\r\n");
 }
 
+static int bt_stricmp_prefix(const char *line, const char *prefix)
+{
+    return strncasecmp(line, prefix, strlen(prefix));
+}
+
 /* Parser for one complete line */
 static void bt_parse_line(char *line)
 {
-  str_trim(line);
-  if (line[0] == '\0') return;
+    str_trim(line);
+    if (line[0] == '\0') return;
 
-  /* START */
-  if (bt_stricmp(line, "START") == 0) {
-    s_ctx->state = BT_STATE_PLAYING;
-    bt_reply_ok();
-    bt_send_status();
-    s_new_cmd = 1;
-    return;
-  }
+    // 1. HELP / ?
+    if (bt_stricmp(line, "HELP") == 0 || strcmp(line, "?") == 0) {
+        bt_print_help();
+        return;
+    }
 
-  /* STOP */
-  if (bt_stricmp(line, "STOP") == 0) {
-    s_ctx->state = BT_STATE_STOPPED;
-    bt_reply_ok();
-    bt_send_status();
-    s_new_cmd = 1;
-    return;
-  }
-
-  /* SET <n> */
-  {
-    unsigned int n;
-    if (sscanf(line, "SET %u", &n) == 1) {
-      if (n <= 255) { /* actual range is 0..N — define N later, for now 0..255 */
-        s_ctx->melody_id = (uint8_t)n;
+    // 2. START
+    if (bt_stricmp(line, "START") == 0) {
+        s_ctx->state = BT_STATE_PLAYING;
         bt_reply_ok();
-
-        /* optional: send selected value */
-        char buf[32];
-        snprintf(buf, sizeof(buf), "MELODY %u\r\n", (unsigned)n);
-        bt_uart_send(buf);
-
         s_new_cmd = 1;
         return;
-      }
-      bt_reply_err();
-      return;
     }
-  }
 
-  /* MODE <n> */
-  {
-    unsigned int n;
-    if (sscanf(line, "MODE %u", &n) == 1) {
-      if (n <= 255) {
-        s_ctx->led_mode = (uint8_t)n;
+    // 3. STOP
+    if (bt_stricmp(line, "STOP") == 0) {
+        s_ctx->state = BT_STATE_STOPPED;
         bt_reply_ok();
-
-        /* optional: send selected value */
-        char buf[32];
-        snprintf(buf, sizeof(buf), "MODE %u\r\n", (unsigned)n);
-        bt_uart_send(buf);
-
         s_new_cmd = 1;
         return;
-      }
-      bt_reply_err();
-      return;
     }
-  }
 
-  /* unknown command */
-  bt_reply_err();
+    // 4. SET <n> Validation
+    if (bt_stricmp_prefix(line, "SET") == 0) { // Check if it starts with SET
+        unsigned int n;
+        if (sscanf(line, "SET %u", &n) == 1) {
+            if (n <= 255) {
+                s_ctx->melody_id = (uint8_t)n;
+                bt_reply_ok();
+                s_new_cmd = 1;
+            } else {
+                bt_reply_err("Melody ID out of range (0-255)");
+            }
+        } else {
+            bt_reply_err("Usage: SET <number>");
+        }
+        return;
+    }
+
+    // 5. MODE <n> Validation
+    if (bt_stricmp_prefix(line, "MODE") == 0) {
+        unsigned int n;
+        if (sscanf(line, "MODE %u", &n) == 1) {
+            if (n <= 3) { // Assuming modes 0-3
+                s_ctx->led_mode = (uint8_t)n;
+                bt_reply_ok();
+                s_new_cmd = 1;
+            } else {
+                bt_reply_err("Mode out of range (0-3)");
+            }
+        } else {
+            bt_reply_err("Usage: MODE <number>");
+        }
+        return;
+    }
+
+    // 6. Unknown Command - The Catch-All
+    char err_buf[64];
+    snprintf(err_buf, sizeof(err_buf), "Unknown command '%s'. Type HELP for info.", line);
+    bt_reply_err(err_buf);
 }
 
 void bt_init(UART_HandleTypeDef *huart, bt_context_t *ctx)
@@ -209,10 +233,12 @@ void bt_process_rx(void)
     } else {
       /* line is too long — reset */
       s_line_len = 0;
-      bt_reply_err();
+      bt_reply_err("Line too long");
     }
   }
 }
+
+
 
 uint8_t bt_has_new_command(void) { return s_new_cmd; }
 void bt_clear_new_command_flag(void) { s_new_cmd = 0; }
